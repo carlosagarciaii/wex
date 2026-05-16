@@ -1,0 +1,9 @@
+
+
+bin/
+obj/
+.vs/
+.vscode/
+packages/
+[Bb]uilds/
+[Bb]uild/
