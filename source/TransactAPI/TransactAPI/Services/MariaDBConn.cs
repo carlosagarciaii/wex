@@ -79,11 +79,20 @@ public class MariaDBConn : IAsyncDisposable
 
         await using MySqlCommand cmd = new(storedProcedure, conn)
         {
-            CommandType = CommandType.StoredProcedure;
+            CommandType = CommandType.StoredProcedure
         };
         await using MySqlDataReader reader = await cmd.ExecuteReaderAsync();
-
-        var res = await reader.ReadAsync();
+        while (await reader.ReadAsync())
+        {
+            results.Add(new TrasnactionDataModel
+            {
+                ID = reader.GetString(reader.GetOrdinal("ID")),
+                Description = reader.GetString(reader.GetOrdinal("Description")),
+                PurchaseTotal = reader.GetDouble(reader.GetOrdinal("PurchaseTotal")),
+                PurchaseDate = reader.GetDateTime(reader.GetOrdinal("PurchaseDate")),
+                Currency = reader.GetString(reader.GetOrdinal("Currency")),
+            });
+        }
         return results;
     }
 
