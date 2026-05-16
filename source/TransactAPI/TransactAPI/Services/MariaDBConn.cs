@@ -1,10 +1,12 @@
-﻿
+
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
 using MySqlConnector;
 using Dapper;
+using TransactAPI.Models;
+using System.Data;
 
 namespace TransactAPI.Services;
 
@@ -67,17 +69,25 @@ public class MariaDBConn : IAsyncDisposable
 
     #region Query Data Methods
 
-    public async Task<List<T>> ExecUSPGetData<T>(string usp, List<(string p, object? v)>) where T : new()
-    {
-        List<T> results = new();
 
+    public async Task<List<TrasnactionDataModel>> GetTransactions()
+    {
+        string storedProcedure = "";
+        List<TrasnactionDataModel> results = new();
         await using MySqlConnection conn = new(AssembleConnString());
         await conn.OpenAsync();
 
+        await using MySqlCommand cmd = new(storedProcedure, conn)
+        {
+            CommandType = CommandType.StoredProcedure;
+        };
+        await using MySqlDataReader reader = await cmd.ExecuteReaderAsync();
 
-
+        var res = await reader.ReadAsync();
         return results;
     }
+
+
 
     #endregion
 
