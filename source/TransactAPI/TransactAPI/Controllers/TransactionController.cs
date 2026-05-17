@@ -43,6 +43,14 @@ public class TransactionController : Controller
             return BadRequest("Transaction data is required");
         }
 
+        double exchangeRate = 0;
+        await using (CurrencyService cs = new(new HttpClient()))
+        {
+            exchangeRate = await cs.GetExchangeRateAsync(transaction.Currency, transaction.PurchaseDate) ?? 0;
+        }
+
+
+
         await using var conn = MariaDBConn.GetConnection("127.0.0.1", 3306, "transact", "dbuser", "dbpassword");
 
         var resp = await conn.SaveTransactions(transaction);
@@ -52,6 +60,9 @@ public class TransactionController : Controller
             0 => Ok(new { resp.Code, resp.Message }),
             1 => Conflict(new { resp.Code, resp.Message }),
             2 => BadRequest(new { resp.Code, resp.Message }),
+            3 => BadRequest(new { resp.Code, resp.Message }),
+            4 => BadRequest(new { resp.Code, resp.Message }),
+            5 => BadRequest(new { resp.Code, resp.Message }),
             _ => StatusCode(500, new { resp.Code, resp.Message })
         };
     }

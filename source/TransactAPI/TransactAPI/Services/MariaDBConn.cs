@@ -92,6 +92,7 @@ public class MariaDBConn : IAsyncDisposable
             {
                 ID = reader.GetString(reader.GetOrdinal("ID")),
                 Description = reader.GetString(reader.GetOrdinal("Description")),
+                USDPurchaseTotal = reader.GetDouble(reader.GetOrdinal("USDPurchaseTotal")),
                 PurchaseTotal = reader.GetDouble(reader.GetOrdinal("PurchaseTotal")),
                 PurchaseDate = reader.GetDateTime(reader.GetOrdinal("PurchaseDate")),
                 Currency = reader.GetString(reader.GetOrdinal("Currency")),
@@ -109,6 +110,7 @@ public class MariaDBConn : IAsyncDisposable
 
         parameters.Add("inID", tran.ID);
         parameters.Add("inDescription", tran.Description);
+        parameters.Add("inUSDPurchaseTotal", tran.USDPurchaseTotal);
         parameters.Add("inPurchaseTotal", tran.PurchaseTotal);
         parameters.Add("inPurchaseDate", tran.PurchaseDate);
         parameters.Add("inCurrency", tran.Currency);

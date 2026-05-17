@@ -17,6 +17,7 @@ FLUSH PRIVILEGES;
 CREATE TABLE IF NOT EXISTS transact.transactions (
     ID            VARCHAR(50) PRIMARY KEY,
     Description   VARCHAR(50) NOT NULL,
+    USDPurchaseTotal	DOUBLE(15,2) NOT NULL,
     PurchaseTotal DOUBLE(15,2) NOT NULL,
     PurchaseDate  DATETIME NOT NULL DEFAULT(UTC_TIMESTAMP),
     Currency      VARCHAR(20) NOT NULL
@@ -37,6 +38,7 @@ BEGIN
     SELECT
         ID,
         Description,
+        USDPurchaseTotal,
         PurchaseTotal,
         PurchaseDate,
         Currency
@@ -50,6 +52,7 @@ END$$
 CREATE OR REPLACE PROCEDURE transact.SaveTransaction(
 	IN inID		VARCHAR(50),
     IN inDescription	VARCHAR(50),
+    IN inUSDPurchaseTotal	DOUBLE(15,2),
     IN inPurchaseTotal	DOUBLE(15,2),
     IN inPurchaseDate	DATETIME,
     IN inCurrency		VARCHAR(20),
@@ -87,11 +90,21 @@ BEGIN
         -- Validate Currency Provided
 		-- -------------------------------------------------------------
         IF (inCurrency IS NULL OR LENGTH(TRIM(inCurrency)) < 1) THEN
-			SELECT 2,'Please provide a currency.'
+			SELECT 3,'Please provide a currency.'
 				INTO outCode, outMessage;
 			LEAVE mainLogic;
         END IF;
 				
+               
+		-- -------------------------------------------------------------
+        -- Validate USD Purchase Amount
+		-- -------------------------------------------------------------
+        IF (inUSDPurchaseTotal < 0) THEN
+			SELECT 4,'USD Purchase amount cannot be a negative number'
+				INTO outCode, outMessage;
+			LEAVE mainLogic;
+        END IF;
+         
                 
 		-- -------------------------------------------------------------
         -- Start Transaction
@@ -100,6 +113,7 @@ BEGIN
         INSERT INTO transact.transactions (
 			ID,
 			Description,
+			USDPurchaseTotal,
 			PurchaseTotal,
 			PurchaseDate,
 			Currency
@@ -107,6 +121,7 @@ BEGIN
         VALUES(
 			inID,
             inDescription,
+            inUSDPurchaseTotal,
             inPurchaseTotal,
             inPurchaseDate,
             inCurrency

@@ -6,6 +6,7 @@ public class TransactionDataModel
 {
     public string ID { get; set; }
     public string Description { get; set; }
+    public double? USDPurchaseTotal { get; set; }
     public double PurchaseTotal { get; set; }
     public DateTime PurchaseDate { get; set; }
 
@@ -13,6 +14,7 @@ public class TransactionDataModel
     /// Currentcy used in the transaction
     /// </summary><remarks>IE: Mexico-Peso</remarks>
     public string Currency { get; set; }
+
 }
 
 #pragma warning restore CS8618 // Data MOdel Only

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using TransactAPI.Models;
 
-public class CurrencyService
+public class CurrencyService : IAsyncDisposable
 {
     private readonly HttpClient _httpClient;
 
@@ -15,7 +15,19 @@ public class CurrencyService
         _httpClient = httpClient;
     }
 
-    public async Task<decimal?> GetExchangeRateAsync(string currency, DateTime targetDate)
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            _httpClient.CancelPendingRequests();
+        }
+        finally
+        {
+            await Task.CompletedTask;
+        }
+    }
+
+    public async Task<double?> GetExchangeRateAsync(string currency, DateTime targetDate)
     {
         try
         {
@@ -82,7 +94,7 @@ public class CurrencyService
             ///////////////////////////////////////////////////////////////
             /// REsults
             ///////////////////////////////////////////////////////////////
-            if (decimal.TryParse(closestRecord.ExchangeRate, out decimal exchangeRate))
+            if (double.TryParse(closestRecord.ExchangeRate, out double exchangeRate))
             {
                 return exchangeRate;
             }
@@ -97,7 +109,7 @@ public class CurrencyService
     }
 
 
-    public async Task<(decimal? Rate, string RecordDate)> GetExchangeRateWithDetailsAsync(string currency, DateTime targetDate)
+    public async Task<(double? Rate, string RecordDate)> GetExchangeRateWithDetailsAsync(string currency, DateTime targetDate)
     {
         var rate = await GetExchangeRateAsync(currency, targetDate);
 
