@@ -1,4 +1,6 @@
-﻿namespace TransactAPI.Models;
+using System.Text.Json.Serialization;
+
+namespace TransactAPI.Models;
 
 #pragma warning disable CS8618 // Data MOdel Only
 public class ExchangeRateAPIResponseModel
@@ -11,8 +13,11 @@ public class ExchangeRateAPIResponseModel
 
 public class ExchangeRateData
 {
+    [JsonPropertyName("country_currency_desc")]
     public string CountryCurrencyDesc { get; set; }
+    [JsonPropertyName("exchange_rate")]
     public string ExchangeRate { get; set; }
+    [JsonPropertyName("record_date")]
     public string RecordDate { get; set; }
 }
 

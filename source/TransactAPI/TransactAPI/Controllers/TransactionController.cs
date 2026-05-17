@@ -38,22 +38,27 @@ public class TransactionController : Controller
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] TransactionDataModel transaction)
     {
-        if (transaction == null)
+        TransactionDataModel submissionData = transaction;
+        if (submissionData == null)
         {
             return BadRequest("Transaction data is required");
         }
 
-        double exchangeRate = 0;
         await using (CurrencyService cs = new(new HttpClient()))
         {
-            exchangeRate = await cs.GetExchangeRateAsync(transaction.Currency, transaction.PurchaseDate) ?? 0;
+            var exchangeRate = await cs.GetExchangeRateAsync(submissionData.Currency, submissionData.PurchaseDate) ?? 0;
+            if (exchangeRate == 0)
+            {
+                return BadRequest("Currency Could not be found");
+            }
+            submissionData.USDPurchaseTotal = submissionData.PurchaseTotal / exchangeRate;
         }
 
 
 
         await using var conn = MariaDBConn.GetConnection("127.0.0.1", 3306, "transact", "dbuser", "dbpassword");
 
-        var resp = await conn.SaveTransactions(transaction);
+        var resp = await conn.SaveTransactions(submissionData);
 
         return resp.Code switch
         {

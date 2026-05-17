@@ -82,8 +82,8 @@ public class MariaDBConn : IAsyncDisposable
             CommandType = CommandType.StoredProcedure
         };
 
-        cmd.Parameters.AddWithValue("start_date", startDate);
-        cmd.Parameters.AddWithValue("end_date", endDate ?? DateOnly.FromDateTime(DateTime.Now));
+        cmd.Parameters.AddWithValue("inStartDate", startDate);
+        cmd.Parameters.AddWithValue("inEndDate", endDate ?? DateOnly.FromDateTime(DateTime.Now));
 
         await using MySqlDataReader reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
