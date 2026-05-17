@@ -1,12 +1,13 @@
 
+using Dapper;
+using MySqlConnector;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
-using MySqlConnector;
-using Dapper;
-using TransactAPI.Models;
 using System.Data;
+using System.Text;
+using System.Transactions;
+using TransactAPI.Models;
 
 namespace TransactAPI.Services;
 
@@ -70,14 +71,13 @@ public class MariaDBConn : IAsyncDisposable
     #region Query Data Methods
 
 
-    public async Task<List<TrasnactionDataModel>> GetTransactions(DateOnly startDate, DateOnly? endDate = null)
+    public async Task<List<TransactionDataModel>> GetTransactions(DateOnly startDate, DateOnly? endDate = null)
     {
-        string storedProcedure = "";
-        List<TrasnactionDataModel> results = new();
+        List<TransactionDataModel> results = new();
         await using MySqlConnection conn = new(AssembleConnString());
         await conn.OpenAsync();
 
-        await using MySqlCommand cmd = new(storedProcedure, conn)
+        await using MySqlCommand cmd = new("GetAlltransactions", conn)
         {
             CommandType = CommandType.StoredProcedure
         };
@@ -88,7 +88,7 @@ public class MariaDBConn : IAsyncDisposable
         await using MySqlDataReader reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
-            results.Add(new TrasnactionDataModel
+            results.Add(new TransactionDataModel
             {
                 ID = reader.GetString(reader.GetOrdinal("ID")),
                 Description = reader.GetString(reader.GetOrdinal("Description")),
@@ -100,6 +100,29 @@ public class MariaDBConn : IAsyncDisposable
         return results;
     }
 
+
+    public async Task<DatabaseResponseModel> SaveTransactions(TransactionDataModel tran)
+    {
+        using var conn = new MySqlConnection(AssembleConnString());
+
+        var parameters = new DynamicParameters();
+
+        parameters.Add("inID", tran.ID);
+        parameters.Add("inDescription", tran.Description);
+        parameters.Add("inPurchaseTotal", tran.PurchaseTotal);
+        parameters.Add("inPurchaseDate", tran.PurchaseDate);
+        parameters.Add("inCurrency", tran.Currency);
+        parameters.Add("outCode", dbType: DbType.Int32, direction: ParameterDirection.Output);
+        parameters.Add("outMessage", dbType: DbType.String, direction: ParameterDirection.Output, size: 50);
+
+        await conn.ExecuteAsync("SaveTransaction", parameters, commandType: CommandType.StoredProcedure);
+
+        return new()
+        {
+            Code = parameters.Get<int>("outCode"),
+            Message = parameters.Get<string>("outMessage")
+        };
+    }
 
 
     #endregion

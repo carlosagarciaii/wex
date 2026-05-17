@@ -86,8 +86,8 @@ BEGIN
 		-- -------------------------------------------------------------
         -- Validate Currency Provided
 		-- -------------------------------------------------------------
-        IF (inCurrency IS NULL OR LENGTH(inCurrency) < 1) THEN
-			SELECT 2,'Purchase amount cannot be a negative number'
+        IF (inCurrency IS NULL OR LENGTH(TRIM(inCurrency)) < 1) THEN
+			SELECT 2,'Please provide a currency.'
 				INTO outCode, outMessage;
 			LEAVE mainLogic;
         END IF;

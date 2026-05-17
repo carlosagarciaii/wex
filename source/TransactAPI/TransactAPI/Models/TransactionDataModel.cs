@@ -2,7 +2,7 @@ namespace TransactAPI.Models;
 
 
 #pragma warning disable CS8618 // Data MOdel Only
-public class TrasnactionDataModel
+public class TransactionDataModel
 {
     public string ID { get; set; }
     public string Description { get; set; }
