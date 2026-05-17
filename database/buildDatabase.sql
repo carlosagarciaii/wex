@@ -29,7 +29,10 @@ CREATE TABLE IF NOT EXISTS transact.transactions (
 
 DELIMITER $$
 
-CREATE OR REPLACE PROCEDURE GetAlltransact.transactions()
+CREATE OR REPLACE PROCEDURE transact.GetAlltransactions(
+	IN inStartDate	DATE,
+    IN inEndDate	DATE
+)
 BEGIN
     SELECT
         ID,
@@ -38,11 +41,13 @@ BEGIN
         PurchaseDate,
         Currency
     FROM transact.transactions
+		WHERE PurchaseDate >= inStartDate 
+				AND PurchaseDate < DATE_ADD(inEndDate, INTERVAL 1 DAY) 
     ORDER BY PurchaseDate desc
     ;
 END$$
 
-CREATE OR REPLACE PROCEDURE SaveTransaction(
+CREATE OR REPLACE PROCEDURE transact.SaveTransaction(
 	IN inID		VARCHAR(50),
     IN inDescription	VARCHAR(50),
     IN inPurchaseTotal	DOUBLE(15,2),
@@ -63,7 +68,7 @@ BEGIN
 		-- -------------------------------------------------------------
         -- Validate Transaction ID
 		-- -------------------------------------------------------------
-		IF EXISTS (SELECT 1 FROM transact.transactions WHERE ID = inID)
+		IF EXISTS (SELECT 1 FROM transact.transactions WHERE ID = inID) THEN
 			SELECT 1, 'Duplicate Transaction ID Rejected' 
 				INTO outCode, outMessage;
 			LEAVE mainLogic;
@@ -81,7 +86,7 @@ BEGIN
 		-- -------------------------------------------------------------
         -- Validate Currency Provided
 		-- -------------------------------------------------------------
-        IF (inCurrency IS NULL OR LEN(inCurrency) < 1) THEN
+        IF (inCurrency IS NULL OR LENGTH(inCurrency) < 1) THEN
 			SELECT 2,'Purchase amount cannot be a negative number'
 				INTO outCode, outMessage;
 			LEAVE mainLogic;
@@ -116,16 +121,9 @@ BEGIN
 				INTO outCode, outMessage;
         
         END IF;
-		
-    
-    
-    
+	
     END mainLogic;
     
-    
-	
-
-
 END$$
 
 

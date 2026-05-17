@@ -70,7 +70,7 @@ public class MariaDBConn : IAsyncDisposable
     #region Query Data Methods
 
 
-    public async Task<List<TrasnactionDataModel>> GetTransactions()
+    public async Task<List<TrasnactionDataModel>> GetTransactions(DateOnly startDate, DateOnly? endDate = null)
     {
         string storedProcedure = "";
         List<TrasnactionDataModel> results = new();
@@ -81,6 +81,10 @@ public class MariaDBConn : IAsyncDisposable
         {
             CommandType = CommandType.StoredProcedure
         };
+
+        cmd.Parameters.AddWithValue("start_date", startDate);
+        cmd.Parameters.AddWithValue("end_date", endDate ?? DateOnly.FromDateTime(DateTime.Now));
+
         await using MySqlDataReader reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
