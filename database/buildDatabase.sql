@@ -14,7 +14,7 @@ FLUSH PRIVILEGES;
 -- ----------------------------------------------------
 -- TABLES
 -- ----------------------------------------------------
-CREATE TABLE IF NOT EXISTS transactions (
+CREATE TABLE IF NOT EXISTS transact.transactions (
     ID            VARCHAR(50) PRIMARY KEY,
     Description   VARCHAR(50) NOT NULL,
     PurchaseTotal DOUBLE(15,2) NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 DELIMITER $$
 
-CREATE PROCEDURE GetAllTransactions()
+CREATE OR REPLACE PROCEDURE GetAlltransact.transactions()
 BEGIN
     SELECT
         ID,
@@ -37,21 +37,92 @@ BEGIN
         PurchaseTotal,
         PurchaseDate,
         Currency
-    FROM transactions
+    FROM transact.transactions
     ORDER BY PurchaseDate desc
     ;
 END$$
 
-CREATE PROCEDURE SaveTransaction(
+CREATE OR REPLACE PROCEDURE SaveTransaction(
 	IN inID		VARCHAR(50),
     IN inDescription	VARCHAR(50),
     IN inPurchaseTotal	DOUBLE(15,2),
     IN inPurchaseDate	DATETIME,
     IN inCurrency		VARCHAR(20),
-	OUT outCode			INT
+	OUT outCode			INT,
+    OUT outMessage		VARCHAR(50)
 )
 BEGIN
 
+	DECLARE rowCount INT;
+    SET rowCount = 0;
+    
+	SELECT -1, 'An unhandled exception occurred' 
+		INTO outCode, outMessage;
+    
+    mainLogic: BEGIN
+		-- -------------------------------------------------------------
+        -- Validate Transaction ID
+		-- -------------------------------------------------------------
+		IF EXISTS (SELECT 1 FROM transact.transactions WHERE ID = inID)
+			SELECT 1, 'Duplicate Transaction ID Rejected' 
+				INTO outCode, outMessage;
+			LEAVE mainLogic;
+        END IF;
+        
+		-- -------------------------------------------------------------
+        -- Validate Purchase Amount
+		-- -------------------------------------------------------------
+        IF (inPurchaseTotal < 0) THEN
+			SELECT 2,'Purchase amount cannot be a negative number'
+				INTO outCode, outMessage;
+			LEAVE mainLogic;
+        END IF;
+        
+		-- -------------------------------------------------------------
+        -- Validate Currency Provided
+		-- -------------------------------------------------------------
+        IF (inCurrency IS NULL OR LEN(inCurrency) < 1) THEN
+			SELECT 2,'Purchase amount cannot be a negative number'
+				INTO outCode, outMessage;
+			LEAVE mainLogic;
+        END IF;
+				
+                
+		-- -------------------------------------------------------------
+        -- Start Transaction
+		-- -------------------------------------------------------------
+        
+        INSERT INTO transact.transactions (
+			ID,
+			Description,
+			PurchaseTotal,
+			PurchaseDate,
+			Currency
+        )
+        VALUES(
+			inID,
+            inDescription,
+            inPurchaseTotal,
+            inPurchaseDate,
+            inCurrency
+        );
+        
+        SELECT ROW_COUNT() INTO rowCount;
+        IF (rowCount = 1) THEN
+			SELECT 0,'Transaction Saved'
+				INTO outCode, outMessage;
+		ELSE
+			SELECT -2,'Error in Commit : Unknown Exception'
+				INTO outCode, outMessage;
+        
+        END IF;
+		
+    
+    
+    
+    END mainLogic;
+    
+    
 	
 
 
