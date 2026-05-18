@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="TransactAPI/TransactAPI.csproj" />
+  <Project Path="TransactAPITests/TransactAPITests.csproj" Id="c0d8893d-a250-4630-b384-dfe41ee82a76" />
 </Solution>

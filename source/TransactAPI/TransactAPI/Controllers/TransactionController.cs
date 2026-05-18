@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
 using TransactAPI.Models;
 using TransactAPI.Services;
 
@@ -9,6 +10,26 @@ namespace TransactAPI.Controllers;
 [Route("tran")]
 public class TransactionController : Controller
 {
+    [HttpGet]
+    public async Task<string> Get()
+    {
+        string result = string.Empty;
+
+        StringBuilder sb = new();
+        result = @"""
+            Please use one of the following examples to model your request
+            Start Date Only: 
+                    <url>/tran?startDate=2026-01-01
+            Start Date And End Date: 
+                    <url>/tran?startDate=2026-01-01&endDate=2027-01-01
+            
+        """;
+
+
+        return sb.ToString();
+    }
+
+
     [HttpGet]
     public async Task<IEnumerable<TransactionDataModel>> Get(DateOnly? startDate, DateOnly? endDate = null)
     {
