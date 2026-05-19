@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using TransactAPI.Models;
 using TransactAPI.Services;
@@ -10,13 +12,10 @@ namespace TransactAPI.Controllers;
 [Route("tran")]
 public class TransactionController : Controller
 {
-    [HttpGet]
-    public async Task<string> Get()
+    [HttpGet("help")]
+    public string GetHelp()
     {
-        string result = string.Empty;
-
-        StringBuilder sb = new();
-        result = @"""
+        return @"""
             Please use one of the following examples to model your request
             Start Date Only: 
                     <url>/tran?startDate=2026-01-01
@@ -24,23 +23,21 @@ public class TransactionController : Controller
                     <url>/tran?startDate=2026-01-01&endDate=2027-01-01
             
         """;
-
-
-        return sb.ToString();
     }
 
 
     [HttpGet]
-    public async Task<IEnumerable<TransactionDataModel>> Get(DateOnly? startDate, DateOnly? endDate = null)
+    public async Task<IEnumerable<TransactionDataModel>> Get(DateOnly startDate, DateOnly? endDate = null)
     {
 
         DateOnly EndDate = (endDate ?? DateOnly.FromDateTime(DateTime.Now));
-        if (startDate == null)
-            throw new BadHttpRequestException(
-                    "Start Date Missing",
-                    StatusCodes.Status400BadRequest
-            );
-
+        /*
+                if (startDate == null)
+                    throw new BadHttpRequestException(
+                            "Start Date Missing",
+                            StatusCodes.Status400BadRequest
+                    );
+        */
 
         if (startDate > EndDate)
         {
@@ -55,6 +52,13 @@ public class TransactionController : Controller
 
         return results.ToArray();
     }
+
+    [HttpGet("coffee")]
+    public async Task<IActionResult> Get()
+    {
+        return StatusCode(418, "No Coffee Here, only Tea.");
+    }
+
 
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] TransactionDataModel transaction)
