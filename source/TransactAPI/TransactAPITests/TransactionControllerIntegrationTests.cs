@@ -1,9 +1,11 @@
-﻿using System;
+using Microsoft.AspNetCore.Mvc.Testing;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using TransactAPI.Models;
 using TransactAPI.Services;
@@ -11,20 +13,20 @@ using Xunit;
 
 namespace TransactAPI.Tests
 {
-    public class TransactionControllerIntegrationTests : IClassFixture<TestWebApplicationFactory>, IAsyncLifetime
+    public class TransactionControllerIntegrationTests : IClassFixture<TestWebApplicationFactory>, IDisposable
     {
         private readonly HttpClient _client;
-        private readonly MariaDBConn _dbConn;
+        private readonly WebApplicationFactory<Program> _factory;
         private readonly List<string> _testTransactionIds = new();
 
-        public TransactionControllerIntegrationTests(TestWebApplicationFactory factory)
+        public TransactionControllerIntegrationTests(WebApplicationFactory<Program> factory)
         {
+            _factory = factory;
             _client = factory.CreateClient();
-            _dbConn = factory.CreateDbConnection();
         }
 
         [Fact]
-        public async Task Get_ReturnsValidResponse()
+        public async Task GetHelp_ReturnsValidResponse()
         {
             // Act
             var response = await _client.GetAsync("/tran/help");
@@ -33,6 +35,7 @@ namespace TransactAPI.Tests
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync();
             Assert.Contains("Start Date Only", content);
+            Assert.Contains("Start Date And End Date", content);
         }
 
         [Fact]
@@ -51,22 +54,28 @@ namespace TransactAPI.Tests
         public async Task Post_ValidTransaction_ReturnsSuccess()
         {
             // Arrange
-            var transaction = new TransactionDataModel
+            var transaction = new
             {
                 ID = Guid.NewGuid().ToString(),
                 Description = "Test Transaction",
                 PurchaseTotal = 100.50,
-                PurchaseDate = DateTime.Now,
+                PurchaseDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
                 Currency = "Mexico-Peso"
             };
 
+            var content = new StringContent(
+                JsonSerializer.Serialize(transaction),
+                System.Text.Encoding.UTF8,
+                "application/json"
+            );
+
             // Act
-            var response = await _client.PostAsJsonAsync("/tran", transaction);
+            var response = await _client.PostAsync("/tran", content);
 
             // Assert
             response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync<dynamic>();
-            Assert.Equal(0, (int)result.Code);
+            var responseContent = await response.Content.ReadAsStringAsync();
+            Assert.Contains("\"Code\":0", responseContent);
 
             _testTransactionIds.Add(transaction.ID);
         }
@@ -75,24 +84,38 @@ namespace TransactAPI.Tests
         public async Task Get_WithValidDateRange_ReturnsTransactions()
         {
             // First post a transaction
-            var transaction = new TransactionDataModel
+            var transaction = new
             {
                 ID = Guid.NewGuid().ToString(),
                 Description = "Test Query Transaction",
                 PurchaseTotal = 200.75,
-                PurchaseDate = DateTime.Now,
+                PurchaseDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
                 Currency = "USD"
             };
 
-            await _client.PostAsJsonAsync("/tran", transaction);
+            var postContent = new StringContent(
+                JsonSerializer.Serialize(transaction),
+                System.Text.Encoding.UTF8,
+                "application/json"
+            );
+
+            var postResponse = await _client.PostAsync("/tran", postContent);
+            postResponse.EnsureSuccessStatusCode();
             _testTransactionIds.Add(transaction.ID);
+
+            // Wait a moment for the transaction to be saved
+            await Task.Delay(100);
 
             // Now get transactions for today
             var startDate = DateOnly.FromDateTime(DateTime.Now.AddDays(-1));
-            var response = await _client.GetAsync($"/tran?startDate={startDate:yyyy-MM-dd}");
+            var getResponse = await _client.GetAsync($"/tran?startDate={startDate:yyyy-MM-dd}");
 
-            response.EnsureSuccessStatusCode();
-            var transactions = await response.Content.ReadFromJsonAsync<List<TransactionDataModel>>();
+            getResponse.EnsureSuccessStatusCode();
+            var responseContent = await getResponse.Content.ReadAsStringAsync();
+            var transactions = JsonSerializer.Deserialize<List<TransactionDataModel>>(
+                responseContent,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
 
             Assert.NotNull(transactions);
             Assert.NotEmpty(transactions);
@@ -103,22 +126,28 @@ namespace TransactAPI.Tests
         {
             // Arrange
             var transactionId = Guid.NewGuid().ToString();
-            var transaction = new TransactionDataModel
+            var transaction = new
             {
                 ID = transactionId,
                 Description = "Duplicate Test",
                 PurchaseTotal = 300.25,
-                PurchaseDate = DateTime.Now,
+                PurchaseDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
                 Currency = "USD"
             };
 
+            var content = new StringContent(
+                JsonSerializer.Serialize(transaction),
+                System.Text.Encoding.UTF8,
+                "application/json"
+            );
+
             // First post should succeed
-            var firstResponse = await _client.PostAsJsonAsync("/tran", transaction);
+            var firstResponse = await _client.PostAsync("/tran", content);
             firstResponse.EnsureSuccessStatusCode();
             _testTransactionIds.Add(transactionId);
 
             // Second post should fail with conflict
-            var secondResponse = await _client.PostAsJsonAsync("/tran", transaction);
+            var secondResponse = await _client.PostAsync("/tran", content);
             Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
         }
 
@@ -129,41 +158,24 @@ namespace TransactAPI.Tests
             var startDate = DateOnly.FromDateTime(DateTime.Now);
             var endDate = DateOnly.FromDateTime(DateTime.Now.AddDays(-1));
 
-            // Act & Assert
-            var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
-                await _client.GetAsync($"/tran?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}"));
+            // Act
+            var response = await _client.GetAsync($"/tran?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
 
-            // Since BadRequestException is thrown in the controller, HttpClient will throw an exception
-            Assert.Contains("400", ex.Message);
+            // Assert
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            var content = await response.Content.ReadAsStringAsync();
+            Assert.Contains("Start Date Must be earlier than End Date", content);
         }
 
-        public async Task InitializeAsync()
+        public void Dispose()
         {
-            await CleanupTestData();
+            _client?.Dispose();
         }
 
-        public async Task DisposeAsync()
-        {
-            await CleanupTestData();
-            _client.Dispose();
-        }
-
-        private async Task CleanupTestData()
-        {
-            // Clean up test data from database
-            if (_testTransactionIds.Any())
-            {
-                foreach (var id in _testTransactionIds)
-                {
-                    // Since we don't have a delete endpoint, we need to use direct database access
-                    await using var conn = _dbConn;
-                    // You would need to add a DeleteTransaction method to MariaDBConn
-                    // For now, we'll skip this or implement a test-only cleanup
-                }
-                _testTransactionIds.Clear();
-            }
-        }
     }
+
+
+
 
     public class CurrencyServiceIntegrationTests
     {
