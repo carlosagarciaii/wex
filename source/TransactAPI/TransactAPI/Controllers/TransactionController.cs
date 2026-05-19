@@ -46,7 +46,13 @@ public class TransactionController : Controller
                     StatusCodes.Status400BadRequest
             );
         }
+
+#if DEBUG
         var conn = MariaDBConn.GetConnection("127.0.0.1", 3306, "transact", "dbuser", "dbpassword");
+#else
+        var conn = MariaDBConn.GetConnection("mariadb-container", 3306, "transact", "dbuser", "dbpassword");
+
+#endif
 
         var results = await conn.GetTransactions((DateOnly)startDate!, EndDate);
 
@@ -81,7 +87,11 @@ public class TransactionController : Controller
 
 
 
+#if DEBUG
         await using var conn = MariaDBConn.GetConnection("127.0.0.1", 3306, "transact", "dbuser", "dbpassword");
+#else
+        await using var conn = MariaDBConn.GetConnection("mariadb-container", 3306, "transact", "dbuser", "dbpassword");
+#endif
 
         var resp = await conn.SaveTransactions(submissionData);
 
