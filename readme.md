@@ -132,7 +132,9 @@ The API connects to a MariaDB database using the following configuration:
 |Password|dbpassword|
 
 
+## Building
 
+From the repo root, run `./buildProject.sh`
 
 
 ## Error Handling
