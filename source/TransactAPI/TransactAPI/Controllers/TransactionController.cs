@@ -69,42 +69,53 @@ public class TransactionController : Controller
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] TransactionDataModel transaction)
     {
-        TransactionDataModel submissionData = transaction;
-        if (submissionData == null)
-        {
-            return BadRequest("Transaction data is required");
-        }
 
-        await using (CurrencyService cs = new(new HttpClient()))
+        try
         {
-            var exchangeRate = await cs.GetExchangeRateAsync(submissionData.Currency, submissionData.PurchaseDate) ?? 0;
-            if (exchangeRate == 0)
+
+            TransactionDataModel submissionData = transaction;
+            if (submissionData == null)
             {
-                return BadRequest("Currency Could not be found");
+                return BadRequest("Transaction data is required");
             }
-            submissionData.USDPurchaseTotal = submissionData.PurchaseTotal / exchangeRate;
-        }
+
+            await using (CurrencyService cs = new(new HttpClient()))
+            {
+                var exchangeRate = await cs.GetExchangeRateAsync(submissionData.Currency, submissionData.PurchaseDate) ?? 0;
+                if (exchangeRate == 0)
+                {
+                    return BadRequest("Currency Could not be found");
+                }
+                submissionData.USDPurchaseTotal = submissionData.PurchaseTotal / exchangeRate;
+            }
 
 
 
 #if DEBUG
-        await using var conn = MariaDBConn.GetConnection("127.0.0.1", 3306, "transact", "dbuser", "dbpassword");
+            await using var conn = MariaDBConn.GetConnection("127.0.0.1", 3306, "transact", "dbuser", "dbpassword");
 #else
         await using var conn = MariaDBConn.GetConnection("mariadb-container", 3306, "transact", "dbuser", "dbpassword");
 #endif
 
-        var resp = await conn.SaveTransactions(submissionData);
+            var resp = await conn.SaveTransactions(submissionData);
 
-        return resp.Code switch
+            return resp.Code switch
+            {
+                0 => Ok(new { resp.Code, resp.Message }),
+                1 => Conflict(new { resp.Code, resp.Message }),
+                2 => BadRequest(new { resp.Code, resp.Message }),
+                3 => BadRequest(new { resp.Code, resp.Message }),
+                4 => BadRequest(new { resp.Code, resp.Message }),
+                5 => BadRequest(new { resp.Code, resp.Message }),
+                _ => StatusCode(500, new { resp.Code, resp.Message })
+            };
+
+        }
+        catch (Exception ex)
         {
-            0 => Ok(new { resp.Code, resp.Message }),
-            1 => Conflict(new { resp.Code, resp.Message }),
-            2 => BadRequest(new { resp.Code, resp.Message }),
-            3 => BadRequest(new { resp.Code, resp.Message }),
-            4 => BadRequest(new { resp.Code, resp.Message }),
-            5 => BadRequest(new { resp.Code, resp.Message }),
-            _ => StatusCode(500, new { resp.Code, resp.Message })
-        };
+            return BadRequest(ex.Message);
+        }
+
     }
 
 

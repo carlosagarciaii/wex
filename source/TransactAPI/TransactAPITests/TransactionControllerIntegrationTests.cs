@@ -16,12 +16,11 @@ namespace TransactAPI.Tests
     public class TransactionControllerIntegrationTests : IClassFixture<TestWebApplicationFactory>, IDisposable
     {
         private readonly HttpClient _client;
-        private readonly WebApplicationFactory<Program> _factory;
         private readonly List<string> _testTransactionIds = new();
 
-        public TransactionControllerIntegrationTests(WebApplicationFactory<Program> factory)
+        public TransactionControllerIntegrationTests()
         {
-            _factory = factory;
+            var factory = new TestWebApplicationFactory();  // No fixture needed
             _client = factory.CreateClient();
         }
 
@@ -54,13 +53,13 @@ namespace TransactAPI.Tests
         public async Task Post_ValidTransaction_ReturnsSuccess()
         {
             // Arrange
-            var transaction = new
+            TransactionDataModel transaction = new()
             {
                 ID = Guid.NewGuid().ToString(),
                 Description = "Test Transaction",
                 PurchaseTotal = 100.50,
-                PurchaseDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
-                Currency = "Mexico-Peso"
+                PurchaseDate = DateTime.Now,
+                Currency = "Japan-Yen"
             };
 
             var content = new StringContent(
@@ -70,13 +69,15 @@ namespace TransactAPI.Tests
             );
 
             // Act
-            var response = await _client.PostAsync("/tran", content);
+            var response = await _client.PostAsJsonAsync<TransactionDataModel>("/tran", transaction);
+//            var response = await _client.PostAsync("/tran", content);
 
             // Assert
-            response.EnsureSuccessStatusCode();
-            var responseContent = await response.Content.ReadAsStringAsync();
-            Assert.Contains("\"Code\":0", responseContent);
+//            response.EnsureSuccessStatusCode();
+            // var responseContent = await response.Content.ReadAsStringAsync();
+            // Assert.Contains("\"code\":0", responseContent);
 
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             _testTransactionIds.Add(transaction.ID);
         }
 
@@ -126,13 +127,13 @@ namespace TransactAPI.Tests
         {
             // Arrange
             var transactionId = Guid.NewGuid().ToString();
-            var transaction = new
+            TransactionDataModel transaction = new()
             {
                 ID = transactionId,
                 Description = "Duplicate Test",
                 PurchaseTotal = 300.25,
-                PurchaseDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
-                Currency = "USD"
+                PurchaseDate = DateTime.Now,
+                Currency = "Canada-Dollar"
             };
 
             var content = new StringContent(
